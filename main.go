@@ -7,7 +7,7 @@ import (
 
 func main() {
 	// Initialize the in-memory database
-	inMemoryDB := db.NewInMemoryDB()
+	inMemoryDB := db.NewDBContext()
 
 	// Seed the database with initial data (if you have a seed function)
 	db.Seed(inMemoryDB)
