@@ -12,6 +12,18 @@ import (
 )
 
 var questionCount int
+var fetchedQuestions []Question // Store fetched questions
+
+type Question struct {
+	ID      int      `json:"id"`
+	Text    string   `json:"text"`
+	Answers []Answer `json:"answers"`
+}
+
+type Answer struct {
+	ID   int    `json:"id"`
+	Text string `json:"text"`
+}
 
 // getQuizCmd represents the getQuiz command
 var getQuizCmd = &cobra.Command{
@@ -41,6 +53,11 @@ func fetchQuiz() {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalf("Failed to read response body: %v", err)
+	}
+
+	// Unmarshal the JSON response into the fetchedQuestions slice
+	if err := json.Unmarshal(body, &fetchedQuestions); err != nil {
+		log.Fatalf("Failed to unmarshal JSON response: %v", err)
 	}
 
 	// Pretty print the JSON response

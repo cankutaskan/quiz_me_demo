@@ -108,22 +108,38 @@ func (db *DBContext) GetParticipantStats(participantID string) entities.Result {
 	return db.stats[participantID]
 }
 
-func (db *DBContext) CalculatePerformance(participantID string) float64 {
+func (db *DBContext) CalculatePerformance(participantID string) (float64, float64) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	stats := db.stats[participantID]
-	total := 0
-	correct := 0
+	// Get the stats for the current participant
+	participantStats := db.stats[participantID]
+
+	// Calculate the performance percentage for the current participant
+	participantPerformance := 0.0
+	if participantStats.TotalAnswers > 0 {
+		participantPerformance = float64(participantStats.CorrectAnswers) / float64(participantStats.TotalAnswers) * 100
+	}
+
+	// Calculate the performance for all participants
+	totalParticipants := 0
+	betterCount := 0
 
 	for _, stat := range db.stats {
-		total += stat.TotalAnswers
-		correct += stat.CorrectAnswers
+		if stat.TotalAnswers > 0 {
+			totalParticipants++
+			overallPerformance := float64(stat.CorrectAnswers) / float64(stat.TotalAnswers) * 100
+			if overallPerformance < participantPerformance {
+				betterCount++
+			}
+		}
 	}
 
-	if total == 0 {
-		return 0
+	// Calculate the percentage of participants that the current participant outperformed
+	comparisonPercentage := 0.0
+	if totalParticipants > 0 {
+		comparisonPercentage = float64(betterCount) / float64(totalParticipants) * 100
 	}
 
-	return float64(stats.CorrectAnswers) / float64(stats.TotalAnswers) * 100
+	return participantPerformance, comparisonPercentage
 }

@@ -76,16 +76,19 @@ func (s *QuizService) handlePostAnswers(w http.ResponseWriter, r *http.Request) 
 	utils.EncodeJSONResponse(w, http.StatusOK, result)
 }
 
-// handleGetPerformance calculates and returns the performance of a participant
 func (s *QuizService) handleGetPerformance(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	participantID := vars["participantID"]
 
-	performance := s.db.CalculatePerformance(participantID) // Delegate to the DB method
+	// Call the modified CalculatePerformance method to get both performance and comparison percentage
+	participantPerformance, comparisonPercentage := s.db.CalculatePerformance(participantID)
 
+	// Prepare the result with both performance metrics
 	result := map[string]float64{
-		"performance": performance,
+		"performance":          participantPerformance,
+		"comparisonPercentage": comparisonPercentage,
 	}
 
+	// Encode the result as a JSON response
 	utils.EncodeJSONResponse(w, http.StatusOK, result)
 }
