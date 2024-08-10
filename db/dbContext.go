@@ -8,26 +8,23 @@ import (
 	"quiz_me/db/entities"
 )
 
-// DBContext is a simple in-memory database for quiz questions and responses
+// DBContext represents the database context
 type DBContext struct {
 	questions map[int]entities.Question
-	responses []entities.Response
+	responses map[string]map[int]entities.Response
 	stats     map[string]entities.Result
 	mu        sync.RWMutex
+	rng       *rand.Rand // Add a rand.Rand object for random number generation
 }
 
-// NewDBContext creates a new in-memory database
+// NewDBContext creates a new database context with a seeded random number generator
 func NewDBContext() *DBContext {
 	return &DBContext{
 		questions: make(map[int]entities.Question),
-		responses: []entities.Response{},
+		responses: make(map[string]map[int]entities.Response),
 		stats:     make(map[string]entities.Result),
+		rng:       rand.New(rand.NewSource(time.Now().UnixNano())), // Create a new rand.Rand object with a seed
 	}
-}
-
-func init() {
-	// Seed the random number generator
-	rand.Seed(time.Now().UnixNano())
 }
 
 // AddQuestion adds a new question to the database
@@ -42,9 +39,8 @@ func (db *DBContext) GetRandomQuestions(totalQuestionsToReturn int) []entities.Q
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	// Validate the input
-	if totalQuestionsToReturn <= 0 {
-		return nil // Return nil if the requested number is non-positive
+	if totalQuestionsToReturn <= 0 || len(db.questions) == 0 {
+		return nil // Return nil if the requested number is non-positive or no questions are available
 	}
 
 	// Group questions by category
@@ -53,34 +49,35 @@ func (db *DBContext) GetRandomQuestions(totalQuestionsToReturn int) []entities.Q
 		categoryMap[question.Category] = append(categoryMap[question.Category], question)
 	}
 
-	// Calculate total number of questions
-	totalQuestions := len(db.questions)
-
 	// Adjust the number of questions to return if it's greater than the total available
-	if totalQuestionsToReturn > totalQuestions {
-		totalQuestionsToReturn = totalQuestions
+	if totalQuestionsToReturn > len(db.questions) {
+		totalQuestionsToReturn = len(db.questions)
 	}
 
-	// Use a slice to keep track of unique questions
-	questionsToReturn := make([]entities.Question, 0, totalQuestionsToReturn)
+	var questionsToReturn []entities.Question
 	selectedQuestions := make(map[int]struct{})
 
 	// Calculate the number of questions to return from each category
 	for _, questions := range categoryMap {
-		numQuestions := int(float64(len(questions)) / float64(totalQuestions) * float64(totalQuestionsToReturn))
-		if numQuestions > len(questions) {
-			numQuestions = len(questions)
+		categoryProportion := float64(len(questions)) / float64(len(db.questions))
+		numQuestionsFromCategory := int(categoryProportion * float64(totalQuestionsToReturn))
+
+		// Ensure at least one question is selected from each category if possible
+		if numQuestionsFromCategory == 0 && len(questionsToReturn) < totalQuestionsToReturn {
+			numQuestionsFromCategory = 1
 		}
 
-		// Select random questions without shuffling
-		for len(questionsToReturn) < totalQuestionsToReturn && numQuestions > 0 {
-			index := rand.Intn(len(questions))
-			question := questions[index]
+		// Select random questions from the category
+		for i := 0; i < numQuestionsFromCategory && len(questionsToReturn) < totalQuestionsToReturn; i++ {
+			for {
+				index := db.rng.Intn(len(questions))
+				question := questions[index]
 
-			if _, exists := selectedQuestions[question.ID]; !exists {
-				questionsToReturn = append(questionsToReturn, question)
-				selectedQuestions[question.ID] = struct{}{}
-				numQuestions--
+				if _, exists := selectedQuestions[question.ID]; !exists {
+					questionsToReturn = append(questionsToReturn, question)
+					selectedQuestions[question.ID] = struct{}{}
+					break
+				}
 			}
 		}
 	}
@@ -88,37 +85,48 @@ func (db *DBContext) GetRandomQuestions(totalQuestionsToReturn int) []entities.Q
 	return questionsToReturn
 }
 
-// AddResponse adds a participant's response to a question
-func (db *DBContext) AddResponse(response entities.Response) {
+// AddResponse accepts a list of responses and resets previous answers for the given participant,
+// recalculating their score based on the new responses.
+func (db *DBContext) AddResponse(responses []entities.Response) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	db.responses = append(db.responses, response)
-
-	// Update participant stats
-	stats, exists := db.stats[response.ParticipantID]
-	if !exists {
-		stats = entities.Result{}
+	if len(responses) == 0 {
+		return // No responses to process
 	}
 
-	question, qExists := db.questions[response.QuestionID]
-	if !qExists {
-		return
-	}
+	participantID := responses[0].ParticipantID // Assuming all responses are from the same participant
 
-	var isCorrect bool
-	for _, answer := range question.Answers {
-		if answer.ID == response.AnswerID {
-			isCorrect = answer.IsCorrect
-			break
+	// Reset previous responses and stats for this participant
+	db.responses[participantID] = make(map[int]entities.Response)
+	db.stats[participantID] = entities.Result{TotalAnswers: len(responses)}
+
+	// Process each response
+	for _, response := range responses {
+		db.responses[participantID][response.QuestionID] = response
+
+		// Update the score if the answer is correct
+		if db.isAnswerCorrect(response) {
+			stats := db.stats[participantID]
+			stats.CorrectAnswers++
+			db.stats[participantID] = stats // Save the updated stats back to the map
 		}
 	}
+}
 
-	stats.TotalAnswers++
-	if isCorrect {
-		stats.CorrectAnswers++
+// isAnswerCorrect checks if a given response is correct
+func (db *DBContext) isAnswerCorrect(response entities.Response) bool {
+	question, qExists := db.questions[response.QuestionID]
+	if !qExists {
+		return false
 	}
-	db.stats[response.ParticipantID] = stats
+
+	for _, answer := range question.Answers {
+		if answer.ID == response.AnswerID {
+			return answer.IsCorrect
+		}
+	}
+	return false
 }
 
 // GetParticipantStats retrieves statistics for a participant
@@ -147,4 +155,12 @@ func (db *DBContext) CalculatePerformance(participantID string) float64 {
 	}
 
 	return float64(stats.CorrectAnswers) / float64(stats.TotalAnswers) * 100
+}
+
+// max returns the maximum of two integers
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

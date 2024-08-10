@@ -52,15 +52,21 @@ func (s *QuizService) handlePostAnswers(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	var entityResponses []entities.Response
+
+	// Convert post.Responses to a list of entities.Response
 	for _, response := range responses.Responses {
-		entityResponse := entities.Response{
+		entityResponses = append(entityResponses, entities.Response{
 			ParticipantID: responses.UserID,
 			QuestionID:    response.QuestionID,
 			AnswerID:      response.AnswerID,
-		}
-		s.db.AddResponse(entityResponse)
+		})
 	}
 
+	// Pass the entire list of responses to AddResponse
+	s.db.AddResponse(entityResponses)
+
+	// Retrieve the updated stats for the participant
 	stats := s.db.GetParticipantStats(responses.UserID)
 	result := map[string]int{
 		"correctAnswers": stats.CorrectAnswers,
