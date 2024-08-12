@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 
@@ -50,7 +50,7 @@ func submitAnswers() {
 	}
 
 	// Add missing answers with default value (-1)
-	for _, question := range fetchedQuestions {
+	for _, question := range fetchedQuiz.Questions {
 		if _, answered := userResponseMap[question.ID]; !answered {
 			parsedResponses = append(parsedResponses, map[string]int{"question_id": question.ID, "answer_id": -1})
 		}
@@ -67,13 +67,13 @@ func submitAnswers() {
 	}
 
 	// Make the POST request
-	resp, err := http.Post("http://localhost:8080/api/quiz-me/responses", "application/json", bytes.NewBuffer(data))
+	resp, err := http.Post("http://localhost:8080/api/quiz-me/quiz/responses", "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		log.Fatalf("Failed to submit answers: %v", err)
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalf("Failed to read response body: %v", err)
 	}

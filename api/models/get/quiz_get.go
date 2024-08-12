@@ -18,8 +18,7 @@ type Quiz struct {
 	Questions []Question `json:"questions"`
 }
 
-// Transform the internal DB model to the API model
-func TransformQuestions(questions []entities.Question) Quiz {
+func Convert(questions []entities.Question) Quiz {
 	var apiQuestions []Question
 	for _, q := range questions {
 		var apiAnswers []Answer
