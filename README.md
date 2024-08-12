@@ -29,8 +29,8 @@ Both questionID and responseID provided in the fetched quiz.
 
 ```bash
 go run quiz_me getQuiz --count=3
-go run quiz_me submitAnswers --user="user1" --responses="10:2,2:2,8:1
-go run quiz_me getPerformance --participant="user1"
+go run quiz_me submitAnswers --user=user1 --responses=10:2,2:2,8:1
+go run quiz_me getPerformance --participant=user1
 ```
 
 ### Notes
