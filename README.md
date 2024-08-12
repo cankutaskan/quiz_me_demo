@@ -20,6 +20,7 @@
 To run the Quiz_me API server:
 
 ```bash
+go build
 go run quiz_me
 ```
 
