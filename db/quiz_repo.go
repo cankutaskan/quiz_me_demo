@@ -1,9 +1,13 @@
 package db
 
 import (
+	"math/rand"
 	"quiz_me/db/entities"
 	"sort"
+	"time"
 )
+
+var rng *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 func (db *DBContext) AddQuestion(question entities.Question) {
 	db.mu.Lock()
@@ -32,7 +36,7 @@ func (db *DBContext) GetRandomQuestions(totalQuestionsToReturn int) []entities.Q
 	}
 
 	for len(questionsToReturn) < totalQuestionsToReturn {
-		index := db.rng.Intn(len(allQuestions))
+		index := rng.Intn(len(allQuestions))
 		question := allQuestions[index]
 
 		if _, exists := selectedQuestions[question.ID]; !exists {
