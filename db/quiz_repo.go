@@ -106,8 +106,10 @@ func collectPerformances(results map[string]entities.Result) []float64 {
 }
 
 func calculateComparisonPercentage(participantPerformance float64, performances []float64) float64 {
-	betterCount := 0
-	samePerformanceCount := 0
+	betterCount := 0.0
+	samePerformanceCount := 0.0
+	totalParticipants := float64(len(performances))
+
 	for _, performance := range performances {
 		if performance < participantPerformance {
 			betterCount++
@@ -117,9 +119,8 @@ func calculateComparisonPercentage(participantPerformance float64, performances 
 	}
 
 	comparisonPercentage := 0.0
-	totalParticipants := len(performances)
-	if totalParticipants > 0 {
-		comparisonPercentage = (float64(betterCount) + float64(samePerformanceCount-1)/2.0) / float64(totalParticipants) * 100
+	if totalParticipants > 1 {
+		comparisonPercentage = ((betterCount + samePerformanceCount/2) / totalParticipants) * 100
 	}
 
 	return comparisonPercentage
