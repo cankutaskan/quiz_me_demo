@@ -17,8 +17,7 @@
 
 ### Running the Project
 
-To run the Quiz_me API server:
-
+To run the Quiz_me API server go to root directory and then: 
 ```bash
 go build
 go run quiz_me
@@ -28,6 +27,7 @@ go run quiz_me
 Response structure: {questionID}:{responseID} 
 Both questionID and responseID provided in the fetched quiz. 
 
+To run the Quiz_me app with commands go to root directory and then: 
 ```bash
 go run quiz_me getQuiz --count=3
 go run quiz_me submitAnswers --user=user1 --responses=10:2,2:2,8:1
