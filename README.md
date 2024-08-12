@@ -34,6 +34,8 @@ go run quiz_me submitAnswers --user=user1 --responses=10:2,2:2,8:1
 go run quiz_me getPerformance --participant=user1
 ```
 
+![Example Image](./example.png)
+
 ### Notes
 Questions are fetched randomly, and any missing responses are automatically populated with -1 as the answer for simplicity. Alternative to each question accomplished by using a field Category. Each category contains alternative questions and response always contain questions with unique IDs.
 
