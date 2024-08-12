@@ -77,7 +77,6 @@ func (s *QuizAPI) getPerformance(w http.ResponseWriter, r *http.Request) {
 
 	participantPerformance, comparisonPercentage := s.db.CalculatePerformance(participantID)
 
-	// Format the response message
 	message := fmt.Sprintf("You were better than %.2f%% of all quizzers", comparisonPercentage)
 
 	performanceResponse := get.PerformanceResponse{

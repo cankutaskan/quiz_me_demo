@@ -6,7 +6,6 @@ import (
 
 func Seed(db *DBContext) {
 	questions := []entities.Question{
-		// Math Questions
 		{
 			ID:   1,
 			Text: "What is 2 + 2?",

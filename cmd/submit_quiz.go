@@ -13,7 +13,7 @@ import (
 )
 
 var userID string
-var responses string // Expecting responses in format "questionID:answerID,questionID:answerID,..."
+var responses string
 
 var submitAnswersCmd = &cobra.Command{
 	Use:   "submitAnswers",
@@ -26,10 +26,8 @@ var submitAnswersCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(submitAnswersCmd)
 
-	// Add flags to accept user ID and responses
 	submitAnswersCmd.Flags().StringVarP(&userID, "user", "u", "", "User ID")
 	submitAnswersCmd.Flags().StringVarP(&responses, "responses", "r", "", "Comma-separated list of responses in format 'questionID:answerID,questionID:answerID,...'")
-
 	submitAnswersCmd.MarkFlagRequired("user")
 	submitAnswersCmd.MarkFlagRequired("responses")
 }
@@ -42,7 +40,6 @@ func submitAnswers() {
 	responseList := strings.Split(responses, ",")
 	parsedResponses := parseUserResponses(responseList)
 
-	// Prepare the payload with just the User ID and Responses
 	payload := map[string]interface{}{
 		"user_id":   userID,
 		"responses": parsedResponses,

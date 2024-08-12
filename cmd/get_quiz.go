@@ -38,8 +38,6 @@ var getQuizCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(getQuizCmd)
-
-	// Add a flag to specify the number of questions
 	getQuizCmd.Flags().IntVarP(&questionCount, "count", "c", 10, "Number of questions to retrieve")
 }
 
@@ -58,12 +56,10 @@ func fetchQuiz() {
 	}
 
 	var quiz Quiz
-	// Unmarshal the JSON response directly into the quiz object
 	if err := json.Unmarshal(body, &quiz); err != nil {
 		log.Fatalf("Failed to unmarshal JSON response: %v", err)
 	}
 
-	// Pretty print the JSON response
 	var prettyJSON bytes.Buffer
 	if err := json.Indent(&prettyJSON, body, "", "  "); err != nil {
 		log.Fatalf("Failed to format JSON response: %v", err)

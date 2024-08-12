@@ -23,7 +23,6 @@ var getPerformanceCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(getPerformanceCmd)
-
 	getPerformanceCmd.Flags().StringVarP(&participantID, "participant", "p", "", "Participant ID")
 	getPerformanceCmd.MarkFlagRequired("participant")
 }
