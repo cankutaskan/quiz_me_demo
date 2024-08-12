@@ -2,6 +2,7 @@ package db
 
 import (
 	"quiz_me/db/entities"
+	"sort"
 )
 
 func (db *DBContext) AddQuestion(question entities.Question) {
@@ -59,26 +60,12 @@ func (db *DBContext) AddResponse(responses []entities.Response) {
 	for _, response := range responses {
 		db.responses[participantID][response.QuestionID] = response
 
-		if db.isAnswerCorrect(response) {
+		if isAnswerCorrect(db.questions, response) {
 			results := db.results[participantID]
 			results.CorrectAnswers++
 			db.results[participantID] = results
 		}
 	}
-}
-
-func (db *DBContext) isAnswerCorrect(response entities.Response) bool {
-	question, qExists := db.questions[response.QuestionID]
-	if !qExists {
-		return false
-	}
-
-	for _, answer := range question.Answers {
-		if answer.ID == response.AnswerID {
-			return answer.IsCorrect
-		}
-	}
-	return false
 }
 
 func (db *DBContext) GetResult(participantID string) entities.Result {
@@ -91,30 +78,63 @@ func (db *DBContext) CalculatePerformance(participantID string) (float64, float6
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	participantResults := db.results[participantID]
+	participantPerformance := calculateParticipantPerformance(db.results, participantID)
+	performances := collectPerformances(db.results)
+	comparisonPercentage := calculateComparisonPercentage(participantPerformance, performances)
 
+	return participantPerformance, comparisonPercentage
+}
+
+func calculateParticipantPerformance(results map[string]entities.Result, participantID string) float64 {
+	participantResults := results[participantID]
 	participantPerformance := 0.0
 	if participantResults.TotalAnswers > 0 {
 		participantPerformance = float64(participantResults.CorrectAnswers) / float64(participantResults.TotalAnswers) * 100
 	}
+	return participantPerformance
+}
 
-	totalParticipants := 0
-	betterCount := 0
-
-	for _, result := range db.results {
+func collectPerformances(results map[string]entities.Result) []float64 {
+	var performances []float64
+	for _, result := range results {
 		if result.TotalAnswers > 0 {
-			totalParticipants++
-			overallPerformance := float64(result.CorrectAnswers) / float64(result.TotalAnswers) * 100
-			if overallPerformance < participantPerformance {
-				betterCount++
-			}
+			performances = append(performances, float64(result.CorrectAnswers)/float64(result.TotalAnswers)*100)
+		}
+	}
+	sort.Float64s(performances)
+	return performances
+}
+
+func calculateComparisonPercentage(participantPerformance float64, performances []float64) float64 {
+	betterCount := 0
+	samePerformanceCount := 0
+	for _, performance := range performances {
+		if performance < participantPerformance {
+			betterCount++
+		} else if performance == participantPerformance {
+			samePerformanceCount++
 		}
 	}
 
 	comparisonPercentage := 0.0
+	totalParticipants := len(performances)
 	if totalParticipants > 0 {
-		comparisonPercentage = float64(betterCount) / float64(totalParticipants) * 100
+		comparisonPercentage = (float64(betterCount) + float64(samePerformanceCount-1)/2.0) / float64(totalParticipants) * 100
 	}
 
-	return participantPerformance, comparisonPercentage
+	return comparisonPercentage
+}
+
+func isAnswerCorrect(questions map[int]entities.Question, response entities.Response) bool {
+	question, qExists := questions[response.QuestionID]
+	if !qExists {
+		return false
+	}
+
+	for _, answer := range question.Answers {
+		if answer.ID == response.AnswerID {
+			return answer.IsCorrect
+		}
+	}
+	return false
 }

@@ -7,12 +7,13 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
 var userID string
-var responses []string // Expecting responses in format "questionID:answerID"
+var responses string // Expecting responses in format "questionID:answerID,questionID:answerID,..."
 
 var submitAnswersCmd = &cobra.Command{
 	Use:   "submitAnswers",
@@ -27,35 +28,21 @@ func init() {
 
 	// Add flags to accept user ID and responses
 	submitAnswersCmd.Flags().StringVarP(&userID, "user", "u", "", "User ID")
-	submitAnswersCmd.Flags().StringArrayVarP(&responses, "response", "r", []string{}, "Responses in format 'questionID:answerID'")
+	submitAnswersCmd.Flags().StringVarP(&responses, "responses", "r", "", "Comma-separated list of responses in format 'questionID:answerID,questionID:answerID,...'")
 
 	submitAnswersCmd.MarkFlagRequired("user")
-	submitAnswersCmd.MarkFlagRequired("response")
+	submitAnswersCmd.MarkFlagRequired("responses")
 }
 
 func submitAnswers() {
-	if userID == "" || len(responses) == 0 {
+	if userID == "" || responses == "" {
 		log.Fatalf("User ID and responses are required")
 	}
 
-	var parsedResponses []map[string]int
-	userResponseMap := make(map[int]int)
+	responseList := strings.Split(responses, ",")
+	parsedResponses := parseUserResponses(responseList)
 
-	// Parse user responses and store in a map
-	for _, response := range responses {
-		var qID, aID int
-		fmt.Sscanf(response, "%d:%d", &qID, &aID)
-		userResponseMap[qID] = aID
-		parsedResponses = append(parsedResponses, map[string]int{"question_id": qID, "answer_id": aID})
-	}
-
-	// Add missing answers with default value (-1)
-	for _, question := range fetchedQuiz.Questions {
-		if _, answered := userResponseMap[question.ID]; !answered {
-			parsedResponses = append(parsedResponses, map[string]int{"question_id": question.ID, "answer_id": -1})
-		}
-	}
-
+	// Prepare the payload with just the User ID and Responses
 	payload := map[string]interface{}{
 		"user_id":   userID,
 		"responses": parsedResponses,
@@ -66,7 +53,6 @@ func submitAnswers() {
 		log.Fatalf("Failed to marshal JSON: %v", err)
 	}
 
-	// Make the POST request
 	resp, err := http.Post("http://localhost:8080/api/quiz-me/quiz/responses", "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		log.Fatalf("Failed to submit answers: %v", err)
@@ -78,7 +64,6 @@ func submitAnswers() {
 		log.Fatalf("Failed to read response body: %v", err)
 	}
 
-	// Pretty print the JSON response
 	var prettyJSON bytes.Buffer
 	if err := json.Indent(&prettyJSON, body, "", "  "); err != nil {
 		log.Fatalf("Failed to format JSON response: %v", err)
@@ -86,4 +71,16 @@ func submitAnswers() {
 
 	fmt.Println("Submission Result:")
 	fmt.Println(prettyJSON.String())
+}
+
+func parseUserResponses(responseList []string) []map[string]int {
+	var parsedResponses []map[string]int
+
+	for _, response := range responseList {
+		var qID, aID int
+		fmt.Sscanf(response, "%d:%d", &qID, &aID)
+		parsedResponses = append(parsedResponses, map[string]int{"question_id": qID, "answer_id": aID})
+	}
+
+	return parsedResponses
 }

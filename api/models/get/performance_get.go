@@ -1,6 +1,7 @@
 package get
 
-type Performance struct {
+type PerformanceResponse struct {
 	Performance          float64 `json:"performance"`
-	ComparisonPercentage float64 `json:"comparisonPercentage"`
+	ComparisonMessage    string  `json:"comparison_message"`
+	ComparisonPercentage float64 `json:"comparison_percentage"`
 }

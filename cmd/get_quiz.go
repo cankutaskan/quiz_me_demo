@@ -12,7 +12,6 @@ import (
 )
 
 var questionCount int
-var fetchedQuiz Quiz
 
 type Quiz struct {
 	Questions []Question `json:"questions"`
@@ -58,8 +57,9 @@ func fetchQuiz() {
 		log.Fatalf("Failed to read response body: %v", err)
 	}
 
-	// Unmarshal the JSON response into the fetchedQuiz object
-	if err := json.Unmarshal(body, &fetchedQuiz); err != nil {
+	var quiz Quiz
+	// Unmarshal the JSON response directly into the quiz object
+	if err := json.Unmarshal(body, &quiz); err != nil {
 		log.Fatalf("Failed to unmarshal JSON response: %v", err)
 	}
 
